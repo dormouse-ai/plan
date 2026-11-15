@@ -1,0 +1,38 @@
+name: links
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: every local markdown link must resolve
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, sys, urllib.parse
+          bad, files = [], list(pathlib.Path(".").rglob("*.md"))
+          for f in files:
+              text = f.read_text(encoding="utf-8", errors="ignore")
+              for label, target in re.findall(r"\[([^\]]+)\]\(([^)\s]+)\)", text):
+                  if target.startswith(("http://", "https://", "mailto:", "#")):
+                      continue
+                  path = urllib.parse.unquote(target.split("#")[0])
+                  if path and not (f.parent / path).exists() and not pathlib.Path(path).exists():
+                      bad.append(f"{f}: [{label}]({target})")
+          if bad:
+              print("broken local links:\n" + "\n".join(bad))
+              sys.exit(1)
+          print(f"ok: {len(files)} files, every local link resolves")
+          PY
