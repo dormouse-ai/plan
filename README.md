@@ -1,50 +1,19 @@
-# dormouse2 — пять репозиториев вместо одного
+# dormouse — plan
 
-Причина не в любви к микросервисам. Причина в том, что за сессию девять раз
-оказывалось: **код делает не то, что написано в его докстринге**, и это не
-видно. Один монолит из 30 тысяч строк нельзя ни проверить целиком, ни заморозить
-по частям.
+Three documents, and that is the point.
 
-## Состав
+| file | what it answers |
+|---|---|
+| [PLAN.md](PLAN.md) | what we build, in what order, and what "done" means |
+| [ARCHITECTURE_V1.md](ARCHITECTURE_V1.md) | the stack, each slot with the measurement that chose it, and the attention/cache arithmetic for a 1M context |
+| [NEGATIVE_RESULTS.md](NEGATIVE_RESULTS.md) | the rule: a losing arm is a hypothesis about a bug, not a verdict — eight checks before anything is switched off |
 
-```
-dormouse-core      config, counters, errors, registry          0 зависимостей
-dormouse-kernels   Triton: MoE, GLU, Newton-Schulz              torch, triton
-dormouse-data      sources, stream, tokenizer                   core
-dormouse-model     blocks, ffn, attn, quant, objectives         core, kernels
-dormouse           train, sft, rl, eval, serve, export          все
-```
+Code lives in [dormouse](https://github.com/dormouse-ai/dormouse) and
+[dormouse-core](https://github.com/dormouse-ai/dormouse-core); the landing page and
+documentation in [site](https://github.com/dormouse-ai/site).
 
-Граф зависимостей строго вниз: `core` не знает ни о ком, `dormouse` знает обо
-всех. Импорт вверх или в сторону — ошибка сборки.
+## The one-line version
 
-## Что где замораживается
-
-| репозиторий | когда считается готовым | после этого |
-|---|---|---|
-| `core` | инварианты и отказы покрыты | **заморожен**: меняется только с новой версией |
-| `kernels` | сверен с внешним якорем, численно стабилен | **заморожен**: он не должен меняться во время экспериментов |
-| `data` | формат и resume проверены побайтово | меняется редко |
-| `model` | каждый компонент имеет инвариант «я работал» | меняется постоянно |
-| `dormouse` | прогон совпадает с эталоном | меняется постоянно |
-
-Заморозка — это тег и `pip install` по тегу, а не «мы обещаем не трогать».
-
-## Правила, которые держат эту схему
-
-1. **`core` не зависит ни от чего.** Если тянет torch — значит это не core.
-2. **`kernels` не знает о моделях.** На вход тензоры, на выход тензоры.
-3. **Модель собирается из реестра**, а не из `if` по всему коду.
-4. **Каждый компонент обязан доложить, что работал** (`dormouse_core.counters`).
-5. **Golden-отпечатки из собственного прогона — не тест.** Внешний якорь или
-   ничего.
-
-## Начало
-
-Первый и единственный готовый модуль — `core/counters.py`. Он выбран первым
-потому, что ловит самый частый наш дефект (флаг включён, механизм не выполнился)
-и не требует ни карты, ни данных.
-
-```bash
-cd core && python -m venv .venv && .venv/bin/pip install pytest && .venv/bin/python -m pytest -q
-```
+1.00 B stored / 46 M active, hybrid attention (3 KDA : 1 CSA) for a 1M context,
+MoE for capacity, MoA for expressivity, ternary weights from step 0 — on one 16 GB
+card, ~250 MB as a file.
