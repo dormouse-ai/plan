@@ -20,7 +20,7 @@ precision   bf16 compute, fp32 master                           (fp8-масте�
 loss        chunked CE                                          (наш замер: 13.3× память)
 speed       static compile + batch 24                            (наш замер: 1.43×)
 head        tied                                                 (27M параметров не платятся)
-size        275M dense                                          (Chinchilla на 5.5 ГБ)
+size        1B хранимых / ~46M активных MoE                     (см. §4)
 ```
 
 ## Почему MoA, а не «просто SwiGLU»
